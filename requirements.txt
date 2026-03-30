@@ -1,0 +1,19 @@
+# Web framework
+fastapi>=0.115.0
+uvicorn>=0.30.0
+
+# Telegram bot
+aiogram>=3.10.0
+
+# System monitoring
+psutil>=6.0.0
+
+# Charts
+matplotlib>=3.9.0
+
+# Database
+sqlalchemy>=2.0.0
+aiosqlite>=0.20.0
+
+# Environment
+python-dotenv>=1.0.0

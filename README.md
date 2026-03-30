@@ -97,7 +97,7 @@ source .venv/bin/activate
 ### 3. Install dependencies
 
 ```bash
-uv pip install fastapi aiogram psutil matplotlib python-dotenv uvicorn aiohttp
+uv pip install -r requirements.txt
 ```
 
 ### 4. Configure environment variables

@@ -2,12 +2,20 @@ from aiogram import Router
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, BufferedInputFile, ReplyKeyboardMarkup, KeyboardButton
 
+from core.config import settings
 from core.logger import logger, get_last_logs
 from services.system_monitor import get_system_status, get_top_processes, generate_graph
 from services.gemini_cli import ask_gemini
 from utils.formatters import format_status, format_processes
 
 router = Router()
+
+
+def _is_admin(message: Message) -> bool:
+    """Check if the message sender is the bot admin."""
+    if not message.from_user:
+        return False
+    return str(message.from_user.id) == settings.TELEGRAM_ADMIN_ID
 
 # Клавиатура навигации
 keyboard = ReplyKeyboardMarkup(
@@ -23,6 +31,10 @@ keyboard = ReplyKeyboardMarkup(
 async def cmd_start(message: Message):
     user_id = message.from_user.id if message.from_user else "unknown"
     logger.info(f"User {user_id} — /start")
+    if not _is_admin(message):
+        logger.warning(f"⛔ Unauthorized access attempt from user {user_id}")
+        await message.answer("⛔ Access denied. This is a private bot.")
+        return
     await message.answer(
         "👋 <b>Cyber-Pocket</b> — твой локальный помощник.\n\n"
         "📋 <b>Команды:</b>\n"
@@ -40,6 +52,9 @@ async def cmd_start(message: Message):
 async def cmd_help(message: Message):
     user_id = message.from_user.id if message.from_user else "unknown"
     logger.info(f"User {user_id} — /help")
+    if not _is_admin(message):
+        await message.answer("⛔ Access denied.")
+        return
     await message.answer(
         "🛠 <b>Справка Cyber-Pocket</b>\n\n"
         "<b>/status</b>\n"
@@ -63,6 +78,9 @@ async def cmd_help(message: Message):
 async def cmd_status(message: Message):
     user_id = message.from_user.id if message.from_user else "unknown"
     logger.info(f"User {user_id} — /status")
+    if not _is_admin(message):
+        await message.answer("⛔ Access denied.")
+        return
     try:
         status = get_system_status()
         procs = get_top_processes(5)
@@ -89,6 +107,9 @@ async def cmd_status(message: Message):
 async def cmd_logs(message: Message):
     user_id = message.from_user.id if message.from_user else "unknown"
     logger.info(f"User {user_id} — /logs")
+    if not _is_admin(message):
+        await message.answer("⛔ Access denied.")
+        return
     try:
         tail = get_last_logs(20)
         # Telegram ограничение 4096 символов
@@ -107,6 +128,9 @@ async def cmd_logs(message: Message):
 async def cmd_ask(message: Message):
     user_id = message.from_user.id if message.from_user else "unknown"
     logger.info(f"User {user_id} — /ask")
+    if not _is_admin(message):
+        await message.answer("⛔ Access denied.")
+        return
 
     # Извлекаем текст после команды /ask
     if not message.text:
