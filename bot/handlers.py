@@ -162,7 +162,7 @@ async def cmd_ask(message: Message):
         answer = answer[:3900] + "\n\n<i>... (ответ обрезан)</i>"
 
     await wait_msg.delete()
-    await message.answer(f"🤖 <b>Gemini:</b>\n\n{answer}", parse_mode="HTML")
+    await message.answer(f"🤖 Gemini:\n\n{answer}")
 
 @router.message(Command("speedtest"))
 @router.message(lambda m: m.text == "🌐 Speedtest")

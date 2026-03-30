@@ -61,7 +61,8 @@ async def ask_gemini(prompt: str, timeout: int = 120) -> str:
     # Добавляем контекст к промпту
     safe_prompt = (
         f"Ты — ИТ-помощник. Отвечай на русском языке. "
-        f"Ты МОЖЕШЬ создавать и редактировать файлы. "
+        f"ВЫВОДИ ответ исключительно как ПРОСТОЙ ТЕКСТ. НЕ используй Markdown-разметку (никаких бэктиков, звездочек). "
+        f"НИКОГДА НЕ СОЗДАВАЙ файлы. "
         f"НИКОГДА НЕ удаляй файлы и директории. "
         f"НЕ используй команды rm, rmdir, unlink, shred. "
         f"НЕ выполняй sudo и НЕ устанавливай пакеты.\n\n"
@@ -74,7 +75,6 @@ async def ask_gemini(prompt: str, timeout: int = 120) -> str:
     try:
         process = await asyncio.create_subprocess_exec(
             gemini_path,
-            "--approval-mode", "auto_edit",  # Разрешаем создание/редактирование файлов
             "-p", safe_prompt,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
