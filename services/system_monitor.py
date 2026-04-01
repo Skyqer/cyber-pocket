@@ -8,6 +8,45 @@ from core.logger import logger
 # Храним историю метрик в памяти (до 900 точек = 30 минут при интервале 2 сек)
 _history: deque[dict] = deque(maxlen=900)
 
+def _get_gpu_status() -> dict:
+    gpu_status: dict = {"gpu_percent": None, "gpu_temp": None, "vram_used_gb": None, "vram_total_gb": None}
+    try:
+        import os
+        cards_dir = "/sys/class/drm"
+        if not os.path.exists(cards_dir):
+            return gpu_status
+            
+        for card in os.listdir(cards_dir):
+            if card.startswith("card") and "-" not in card:
+                dev_dir = os.path.join(cards_dir, card, "device")
+                busy_path = os.path.join(dev_dir, "gpu_busy_percent")
+                if os.path.exists(busy_path):
+                    with open(busy_path, "r") as f:
+                        gpu_status["gpu_percent"] = float(f.read().strip())
+                    
+                    vram_used_path = os.path.join(dev_dir, "mem_info_vram_used")
+                    if os.path.exists(vram_used_path):
+                        with open(vram_used_path, "r") as f:
+                            gpu_status["vram_used_gb"] = round(int(f.read().strip()) / (1024**3), 2)
+                            
+                    vram_total_path = os.path.join(dev_dir, "mem_info_vram_total")
+                    if os.path.exists(vram_total_path):
+                        with open(vram_total_path, "r") as f:
+                            gpu_status["vram_total_gb"] = round(int(f.read().strip()) / (1024**3), 2)
+                            
+                    hwmon_dir = os.path.join(dev_dir, "hwmon")
+                    if os.path.exists(hwmon_dir):
+                        for hw in os.listdir(hwmon_dir):
+                            temp_path = os.path.join(hwmon_dir, hw, "temp1_input")
+                            if os.path.exists(temp_path):
+                                with open(temp_path, "r") as f:
+                                    gpu_status["gpu_temp"] = round(int(f.read().strip()) / 1000, 1)
+                                break
+                    break
+    except Exception as e:
+        logger.error(f"Error reading GPU status: {e}")
+    return gpu_status
+
 
 def get_system_status() -> dict:
     """Собирает текущие метрики системы."""
@@ -52,6 +91,8 @@ def get_system_status() -> dict:
     hours, remainder = divmod(int(uptime.total_seconds()), 3600)
     minutes, _ = divmod(remainder, 60)
 
+    gpu_stats = _get_gpu_status()
+
     status = {
         "cpu_percent": cpu,
         "ram_used_gb": ram_used_gb,
@@ -66,11 +107,16 @@ def get_system_status() -> dict:
         "os": f"{platform.system()} {platform.release()}",
         "timestamp": datetime.datetime.now(),
     }
+    status.update(gpu_stats)
 
     # Сохраняем в историю для графика
     _history.append({"time": status["timestamp"], "cpu": cpu, "ram": mem.percent})
 
-    logger.info(f"Metrics: CPU={cpu}% RAM={mem.percent}% Temp={temp}")
+    gpu_log = ""
+    if gpu_stats.get("gpu_percent") is not None:
+        gpu_log = f" GPU={gpu_stats['gpu_percent']}% GTemp={gpu_stats['gpu_temp']}° VRAM={gpu_stats['vram_used_gb']}G"
+        
+    logger.info(f"Metrics: CPU={cpu}% RAM={mem.percent}% Temp={temp}{gpu_log}")
     return status
 
 

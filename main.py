@@ -7,18 +7,23 @@ from core.config import settings
 from core.logger import logger
 from bot.handlers import router as bot_router
 from services.system_monitor import get_system_status
+from services.alerts import AlertManager
 
 # Aiogram
 bot = Bot(token=settings.TELEGRAM_BOT_TOKEN)
 dp = Dispatcher()
 dp.include_router(bot_router)
 
+alert_manager = AlertManager()
+
 
 async def metrics_collector():
-    """Фоновый сбор метрик каждые 10 сек для накопления истории графика."""
+    """Фоновый сбор метрик каждые 10 сек для накопления истории графика,
+    а также проверка на алерты."""
     while True:
         try:
-            get_system_status()
+            status = get_system_status()
+            await alert_manager.check_and_notify(status, bot)
         except Exception as e:
             logger.error(f"Metrics collector error: {e}")
         await asyncio.sleep(10)

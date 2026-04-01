@@ -8,8 +8,9 @@ A personal system monitoring assistant that lives inside your PC and talks to yo
 
 | Feature | Description |
 |---|---|
-| 📊 **System Status** | CPU %, RAM %, disk usage, temperature, load average, uptime |
+| 📊 **System Status** | CPU, RAM, GPU & VRAM %, disk usage, temperatures, load average, uptime |
 | 📈 **Live Graph** | CPU & RAM load chart built from a rolling 30-minute history |
+| 🚨 **Smart Alerts** | Automatic Telegram notifications for high CPU/GPU load or temperature anomalies |
 | 🔝 **Top Processes** | Top 5 processes by CPU consumption |
 | 📝 **App Logs** | View the last 20 lines of the application log directly in Telegram |
 | 🌐 **Speedtest** | Measure your internet download/upload speed and ping on demand |
