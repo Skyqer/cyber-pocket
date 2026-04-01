@@ -21,7 +21,7 @@ def _is_admin(message: Message) -> bool:
 keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="📊 Статус"), KeyboardButton(text="📝 Логи")],
-        [KeyboardButton(text="❓ Помощь")],
+        [KeyboardButton(text="🌐 Speedtest"), KeyboardButton(text="❓ Помощь")],
     ],
     resize_keyboard=True,
 )
@@ -40,6 +40,7 @@ async def cmd_start(message: Message):
         "📋 <b>Команды:</b>\n"
         "/status — Состояние системы + график\n"
         "/logs — Последние записи из лога\n"
+        "/speedtest — Измерить скорость сети\n"
         "/ask &lt;вопрос&gt; — Спросить Gemini\n"
         "/help — Справка",
         parse_mode="HTML",
@@ -63,6 +64,9 @@ async def cmd_help(message: Message):
         "Прикладывает график нагрузки, если есть история.\n\n"
         "<b>/logs</b>\n"
         "Показывает последние 20 строк лога приложения.\n\n"
+        "<b>/speedtest</b>\n"
+        "Замеряет скорость интернет-соединения.\n"
+        "Может занять около 30 секунд.\n\n"
         "<b>/ask &lt;вопрос&gt;</b>\n"
         "Отправляет вопрос в Gemini CLI и возвращает ответ.\n"
         "Gemini не выполняет никаких команд на ПК,\n"
@@ -158,4 +162,28 @@ async def cmd_ask(message: Message):
         answer = answer[:3900] + "\n\n<i>... (ответ обрезан)</i>"
 
     await wait_msg.delete()
-    await message.answer(f"🤖 <b>Gemini:</b>\n\n{answer}", parse_mode="HTML")
+    await message.answer(f"🤖 Gemini:\n\n{answer}")
+
+@router.message(Command("speedtest"))
+@router.message(lambda m: m.text == "🌐 Speedtest")
+async def cmd_speedtest(message: Message):
+    user_id = message.from_user.id if message.from_user else "unknown"
+    logger.info(f"User {user_id} — /speedtest")
+    if not _is_admin(message):
+        await message.answer("⛔ Access denied.")
+        return
+
+    wait_msg = await message.answer("⏳ <i>Измеряю скорость... Это может занять около 30 секунд.</i>", parse_mode="HTML")
+    
+    try:
+        from services.network import run_speedtest
+        from utils.formatters import format_speedtest
+        
+        results = await run_speedtest()
+        text = format_speedtest(results)
+        await wait_msg.delete()
+        await message.answer(text, parse_mode="HTML")
+    except Exception as e:
+        logger.error(f"Error in /speedtest: {e}")
+        await wait_msg.delete()
+        await message.answer(f"⚠️ Ошибка при измерении скорости: {e}")

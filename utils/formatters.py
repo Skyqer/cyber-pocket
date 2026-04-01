@@ -25,3 +25,21 @@ def format_processes(procs: list[dict]) -> str:
             f"<code>{i}. {p['name']:<25} CPU: {p['cpu']:>5.1f}%  RAM: {p['mem']:>4.1f}%</code>"
         )
     return "\n".join(lines)
+
+def format_speedtest(results: dict) -> str:
+    """Форматирует данные speedtest для Telegram."""
+    download_mbps = results["download"] / 1_000_000
+    upload_mbps = results["upload"] / 1_000_000
+    ping = results["ping"]
+    server = f"{results['server']['sponsor']} ({results['server']['name']})"
+    client_ip = results["client"]["ip"]
+    
+    return (
+        f"🌐 <b>Отчёт Speedtest:</b>\n"
+        f"━━━━━━━━━━━━━━━━━━━\n"
+        f"⬇️ <b>Download:</b> {download_mbps:.2f} Mbps\n"
+        f"⬆️ <b>Upload:</b> {upload_mbps:.2f} Mbps\n"
+        f"🏓 <b>Ping:</b> {ping:.2f} ms\n"
+        f"🎯 <b>Server:</b> {server}\n"
+        f"📡 <b>IP клиент:</b> {client_ip}"
+    )
