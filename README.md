@@ -53,7 +53,8 @@ cyber-pocket/
 ├── services/
 │   ├── system_monitor.py    # psutil metrics, graph generation, process list
 │   ├── network.py           # Async speedtest-cli runner for internet checks
-│   └── gemini_cli.py        # Async wrapper around Gemini CLI with safety filters
+│   ├── gemini_cli.py        # Async wrapper around Gemini CLI with safety filters
+│   └── alerts.py            # Automated system monitoring & Telegram notifications
 ├── utils/
 │   └── formatters.py        # Text formatting helpers for bot messages
 ├── logs/                    # Auto-created, excluded from git
