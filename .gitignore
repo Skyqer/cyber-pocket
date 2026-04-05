@@ -50,6 +50,7 @@ Thumbs.db
 .coverage
 htmlcov/
 .tox/
+.code-workspace
 
 # ─── Type checking ────────────────────────────────────────
 .mypy_cache/
