@@ -51,6 +51,7 @@ Thumbs.db
 htmlcov/
 .tox/
 .code-workspace
+cyber-pocket.code-workspace
 
 # ─── Type checking ────────────────────────────────────────
 .mypy_cache/
