@@ -2,6 +2,11 @@ def format_status(data: dict) -> str:
     """Форматирует метрики системы для Telegram."""
     temp_str = f"{data['temperature']:.1f}°C" if data["temperature"] else "N/A"
 
+    gpu_temp = data.get('gpu_temp')
+    gpu_temp_str = f" (Temp: {gpu_temp}°C)" if gpu_temp is not None else ""
+    gpu_pct = data.get('gpu_percent')
+    gpu_pct_str = f"{gpu_pct}%" if gpu_pct is not None else "N/A"
+
     return (
         f"🖥 <b>Система:</b> {data['os']}\n"
         f"⏱ <b>Uptime:</b> {data['uptime']}\n"
@@ -9,7 +14,7 @@ def format_status(data: dict) -> str:
         f"⚡ <b>CPU:</b> {data['cpu_percent']}%\n"
         f"💾 <b>RAM:</b> {data['ram_used_gb']}/{data['ram_total_gb']} GB ({data['ram_percent']}%)\n"
         f"🌡 <b>Temp:</b> {temp_str}\n"
-        f"🎮 <b>GPU:</b> {data.get('gpu_percent', 'N/A')}% (Temp: {data.get('gpu_temp', 'N/A')}°C)\n"
+        f"🎮 <b>GPU:</b> {gpu_pct_str}{gpu_temp_str}\n"
         f"📹 <b>VRAM:</b> {data.get('vram_used_gb', 'N/A')}/{data.get('vram_total_gb', 'N/A')} GB\n"
         f"📊 <b>Load Avg:</b> {data['load_avg']}\n"
         f"💿 <b>Disk:</b> {data['disk_used_gb']}/{data['disk_total_gb']} GB ({data['disk_percent']}%)\n"

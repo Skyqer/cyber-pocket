@@ -1,5 +1,6 @@
 import asyncio
 import shutil
+import os
 from core.logger import logger
 
 # Чёрный список опасных команд/подстрок
@@ -73,6 +74,12 @@ async def ask_gemini(prompt: str, timeout: int = 120) -> str:
 
     # Проверяем, установлен ли gemini
     gemini_path = shutil.which("gemini")
+    if not gemini_path and os.name == "nt":
+        # Fallback для Windows: проверяем глобальную папку npm
+        fallback = os.path.expandvars(r"%APPDATA%\npm\gemini.cmd")
+        if os.path.exists(fallback):
+            gemini_path = fallback
+
     if not gemini_path:
         return "⚠️ Gemini CLI не найден. Установите: npm install -g @google/gemini-cli"
 
@@ -91,12 +98,23 @@ async def ask_gemini(prompt: str, timeout: int = 120) -> str:
 
     process = None
     try:
-        process = await asyncio.create_subprocess_exec(
-            gemini_path,
-            "-p", safe_prompt,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
+        if os.name == "nt":
+            # На Windows лучше запускать .cmd файлы через shell
+            # Заключаем пути в кавычки для безопасности
+            cmd_line = f'"{gemini_path}" -p "{safe_prompt}"'
+            process = await asyncio.create_subprocess_shell(
+                cmd_line,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+        else:
+            process = await asyncio.create_subprocess_exec(
+                gemini_path,
+                "-p", safe_prompt,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+
         stdout, stderr = await asyncio.wait_for(
             process.communicate(), timeout=timeout
         )
@@ -133,5 +151,7 @@ async def ask_gemini(prompt: str, timeout: int = 120) -> str:
         logger.warning("Gemini timeout")
         return "⏳ Gemini не ответил за 2 минуты. Попробуйте позже или упростите вопрос."
     except Exception as e:
-        logger.error(f"Gemini exception: {e}")
-        return f"⚠️ Ошибка при вызове Gemini: {e}"
+        import traceback
+        tb = traceback.format_exc()
+        logger.error(f"Gemini exception: {repr(e)}\n{tb}")
+        return f"⚠️ Ошибка при вызове Gemini: {repr(e)}"

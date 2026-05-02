@@ -241,7 +241,9 @@ def _get_cpu_temperature() -> float | None:
 
 def get_system_status() -> dict:
     """Собирает текущие метрики системы."""
-    cpu = psutil.cpu_percent(interval=0)
+    # Используем интервал 0.5 сек для получения реальной загрузки
+    # Это безопасно, так как функция вызывается через asyncio.to_thread()
+    cpu = psutil.cpu_percent(interval=0.5)
     mem = psutil.virtual_memory()
     ram_used_gb = round(mem.used / (1024 ** 3), 1)
     ram_total_gb = round(mem.total / (1024 ** 3), 1)
