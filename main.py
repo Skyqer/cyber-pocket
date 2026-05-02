@@ -47,6 +47,14 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down...")
     collector_task.cancel()
     bot_task.cancel()
+    try:
+        await collector_task
+    except asyncio.CancelledError:
+        pass
+    try:
+        await bot_task
+    except asyncio.CancelledError:
+        pass
     await dp.stop_polling()
     await bot.session.close()
     logger.info("👋 Cyber-Pocket stopped.")

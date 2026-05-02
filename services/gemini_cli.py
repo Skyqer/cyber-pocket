@@ -4,22 +4,40 @@ from core.logger import logger
 
 # Чёрный список опасных команд/подстрок
 _DANGEROUS = [
-    # Удаление файлов / директорий
+    # Удаление файлов / директорий (Linux)
     "rm -rf", "rm -r /", "rm -f", "rmdir", "unlink ",
     "shred ", "trash ",
-    # Форматирование / диски
+    # Удаление файлов / директорий (Windows)
+    "del /f", "del /s", "del /q", "rd /s", "rd /q",
+    "rmdir /s", "rmdir /q", "erase ",
+    # Форматирование / диски (Linux)
     "mkfs", "dd if=", "wipefs", "fdisk", "parted",
-    # Перезагрузка / выключение
+    # Форматирование / диски (Windows)
+    "format c:", "format d:", "diskpart", "clean all",
+    # Перезагрузка / выключение (Linux)
     "reboot", "shutdown", "poweroff", "halt", "init 0", "init 6",
-    # Опасные системные действия
+    # Перезагрузка / выключение (Windows)
+    "shutdown /s", "shutdown /r", "shutdown /f",
+    # Опасные системные действия (Linux)
     "chmod 777", ":(){ :|:& };:", "fork bomb",
     "> /dev/sd", "systemctl stop", "systemctl disable", "kill -9 1",
+    # Опасные системные действия (Windows)
+    "reg delete", "reg add", "bcdedit", "taskkill /f",
+    "net stop", "net user", "icacls", "takeown",
+    "powershell -enc", "invoke-expression", "iex(",
+    "set-executionpolicy",
 ]
 
 # Запрещённые действия в промпте (чтобы не просили gemini запускать программы)
 _BLOCKED_PROMPTS = [
+    # Linux
     "sudo ", "apt ", "pacman ", "yay ",
+    # Windows
+    "choco ", "scoop ", "winget ",
+    "pip install", "npm install",
+    # Общие
     "удали", "delete ", "remove ",
+    "форматируй диск", "format disk",
 ]
 
 

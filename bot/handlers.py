@@ -1,10 +1,11 @@
+import html
 from aiogram import Router
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, BufferedInputFile, ReplyKeyboardMarkup, KeyboardButton
 
 from core.config import settings
 from core.logger import logger, get_last_logs
-from services.system_monitor import get_system_status, get_top_processes, generate_graph
+from services.system_monitor import get_system_status_async, get_top_processes, generate_graph
 from services.gemini_cli import ask_gemini
 from utils.formatters import format_status, format_processes
 
@@ -86,7 +87,7 @@ async def cmd_status(message: Message):
         await message.answer("⛔ Access denied.")
         return
     try:
-        status = get_system_status()
+        status = await get_system_status_async()
         procs = get_top_processes(5)
 
         text = format_status(status) + "\n" + format_processes(procs)
@@ -120,7 +121,7 @@ async def cmd_logs(message: Message):
         if len(tail) > 3900:
             tail = tail[-3900:]
         await message.answer(
-            f"📝 <b>Последние логи:</b>\n\n<pre>{tail}</pre>",
+            f"📝 <b>Последние логи:</b>\n\n<pre>{html.escape(tail)}</pre>",
             parse_mode="HTML",
         )
     except Exception as e:
@@ -162,7 +163,7 @@ async def cmd_ask(message: Message):
         answer = answer[:3900] + "\n\n<i>... (ответ обрезан)</i>"
 
     await wait_msg.delete()
-    await message.answer(f"🤖 Gemini:\n\n{answer}")
+    await message.answer(f"🤖 Gemini:\n\n{html.escape(answer)}")
 
 @router.message(Command("speedtest"))
 @router.message(lambda m: m.text == "🌐 Speedtest")
