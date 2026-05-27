@@ -88,6 +88,7 @@ cyber-pocket/
 - [uv](https://docs.astral.sh/uv/) installed
 - A Telegram bot token from [@BotFather](https://t.me/BotFather)
 - *(Optional)* [Gemini CLI](https://github.com/google-gemini/gemini-cli) installed globally (`npm install -g @google/gemini-cli`) for `/ask` to work
+- *(Windows, optional)* [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) running in the background (for CPU temperature monitoring)
 - *(Windows, optional)* NVIDIA GPU drivers installed (for GPU monitoring via `nvidia-smi`)
 
 ### 1. Clone the repository
@@ -163,13 +164,13 @@ The FastAPI server will start on `http://127.0.0.1:8000` and the Telegram bot wi
 
 | Feature | Method | Notes |
 |---|---|---|
-| CPU % | `psutil` | ✅ Full support |
+| CPU % | `psutil` | ✅ Full support (System Idle Process excluded) |
 | RAM | `psutil` | ✅ Full support |
 | Disk | `psutil` | Uses `C:\` as root |
-| CPU Temp | WMI (`MSAcpi_ThermalZoneTemperature`) | May require admin privileges; shows N/A if unavailable |
+| CPU Temp | WMI (`MSAcpi_ThermalZoneTemperature`) / OHM | ✅ Native WMI or via Open/LibreHardwareMonitor in background |
 | GPU (NVIDIA) | `nvidia-smi` | ✅ Utilization + Temperature + VRAM |
-| GPU (AMD) | Windows Performance Counters | ✅ Utilization + VRAM; temperature not available |
-| Load Average | — | Not available on Windows (shows N/A) |
+| GPU (AMD/Intel) | Perf Counters + Registry | ✅ Utilization + VRAM (>4GB supported); temperature not available |
+| Load Average | `psutil` | ✅ Full support |
 | Processes | `psutil` | ✅ Full support |
 | Speedtest | `speedtest-cli` | ✅ Full support |
 | Gemini CLI | `gemini` subprocess | ✅ Full support |

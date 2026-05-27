@@ -139,14 +139,17 @@ def _try_performance_counters() -> dict | None:
     except Exception as e:
         logger.error(f"GPU Performance Counters error: {e}")
 
-    # Шаг 2: VRAM total из WMI (Win32_VideoController.AdapterRAM)
+    # Шаг 2: VRAM total (чтение из реестра для обхода лимита в 4GB у Win32_VideoController.AdapterRAM)
     try:
+        ps_script = (
+            "$mem = (Get-ItemProperty 'HKLM:\\System\\CurrentControlSet\\Control\\Video\\*\\0000' "
+            "-ErrorAction SilentlyContinue | "
+            "Measure-Object -Property 'HardwareInformation.qwMemorySize' -Maximum).Maximum;"
+            "if ($mem) { Write-Output $mem } else { "
+            "(Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue | Select-Object -First 1).AdapterRAM }"
+        )
         result = subprocess.run(
-            [
-                "powershell", "-NoProfile", "-Command",
-                "(Get-CimInstance Win32_VideoController"
-                " | Select-Object -First 1).AdapterRAM"
-            ],
+            ["powershell", "-NoProfile", "-Command", ps_script],
             capture_output=True,
             text=True,
             timeout=5,
@@ -202,11 +205,12 @@ def _get_cpu_temperature() -> float | None:
     temp = None
 
     if settings.IS_WINDOWS:
+        # Пробуем через MSAcpi_ThermalZoneTemperature
         try:
             result = subprocess.run(
                 [
                     "powershell", "-NoProfile", "-Command",
-                    "Get-CimInstance MSAcpi_ThermalZoneTemperature -Namespace root/wmi "
+                    "Get-CimInstance MSAcpi_ThermalZoneTemperature -Namespace root/wmi -ErrorAction SilentlyContinue "
                     "| Select-Object -First 1 -ExpandProperty CurrentTemperature"
                 ],
                 capture_output=True,
@@ -219,6 +223,28 @@ def _get_cpu_temperature() -> float | None:
                 temp = round((raw / 10.0) - 273.15, 1)
         except Exception:
             pass
+            
+        # Если не вышло (ошибка "Not Supported"), пробуем OpenHardwareMonitor / LibreHardwareMonitor
+        if temp is None:
+            for namespace in ["root\\OpenHardwareMonitor", "root\\LibreHardwareMonitor"]:
+                try:
+                    result = subprocess.run(
+                        [
+                            "powershell", "-NoProfile", "-Command",
+                            f"Get-WmiObject -Namespace {namespace} -Class Sensor -ErrorAction SilentlyContinue "
+                            "| Where-Object {{ $_.SensorType -eq 'Temperature' -and $_.Name -match 'cpu|core' }} "
+                            "| Select-Object -First 1 -ExpandProperty Value"
+                        ],
+                        capture_output=True,
+                        text=True,
+                        timeout=5,
+                        creationflags=subprocess.CREATE_NO_WINDOW,
+                    )
+                    if result.returncode == 0 and result.stdout.strip():
+                        temp = round(float(result.stdout.strip()), 1)
+                        break
+                except Exception:
+                    continue
     else:
         try:
             sensors = psutil.sensors_temperatures()
@@ -251,9 +277,12 @@ def get_system_status() -> dict:
     temp = _get_cpu_temperature()
 
     try:
-        load_avg = os.getloadavg()
+        if hasattr(psutil, "getloadavg"):
+            load_avg = psutil.getloadavg()
+        else:
+            load_avg = os.getloadavg()
         load_str = f"{load_avg[0]:.2f} / {load_avg[1]:.2f} / {load_avg[2]:.2f}"
-    except (OSError, AttributeError):
+    except (OSError, AttributeError, NotImplementedError):
         load_str = "N/A"
 
     disk_root = "C:\\" if settings.IS_WINDOWS else "/"
@@ -302,18 +331,34 @@ def get_system_status() -> dict:
 
 def get_top_processes(n: int = 5) -> list[dict]:
     """Возвращает топ-N процессов по потреблению CPU."""
-    procs = []
-    for p in psutil.process_iter(["pid", "name", "cpu_percent", "memory_percent"]):
+    import time
+    active_procs = []
+    for p in psutil.process_iter(["pid", "name"]):
         try:
-            info = p.info
+            name = p.info.get("name")
+            if name and name != "System Idle Process":
+                p.cpu_percent(interval=None)  # засечка
+                active_procs.append(p)
+        except (psutil.NoSuchProcess, psutil.AccessDenied, AttributeError):
+            pass
+
+    time.sleep(0.1)
+
+    procs = []
+    num_cpus = psutil.cpu_count() or 1
+    for p in active_procs:
+        try:
+            cpu_val = p.cpu_percent(interval=None) / num_cpus
+            mem_val = p.memory_percent()
             procs.append({
-                "pid": info["pid"],
-                "name": info["name"][:25],
-                "cpu": info["cpu_percent"] or 0.0,
-                "mem": round(info["memory_percent"] or 0.0, 1),
+                "pid": p.pid,
+                "name": p.info["name"][:25],
+                "cpu": round(cpu_val, 1),
+                "mem": round(mem_val, 1),
             })
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            continue
+        except (psutil.NoSuchProcess, psutil.AccessDenied, AttributeError):
+            pass
+
     procs.sort(key=lambda x: x["cpu"], reverse=True)
     return procs[:n]
 
